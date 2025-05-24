@@ -1,0 +1,22 @@
+unit module OcrNumbers;
+
+my role X::NucleotideCount is Exception {}
+my class X::NucleotideCount::InvalidNumLines does X::NucleotideCount {
+    method message { 'Number of input lines is not a multiple of four' }
+}
+my class X::NucleotideCount::InvalidNumColumns does X::NucleotideCount {
+    method message { 'Number of input columns is not a multiple of three' }
+}
+multi ascii-to-digits ( $art where .lines.elems !%% 4 ) is export {
+  X::NucleotideCount::InvalidNumLines.new.throw
+}
+multi ascii-to-digits ( $art where .lines.map( *.chars ).any !%% 3 ) is export {
+  X::NucleotideCount::InvalidNumColumns.new.throw
+}
+multi ascii-to-digits ( $art ) is export {
+  constant $NUMBERS = join "\n", " _     _  _     _  _  _  _  _ ", "| |  | _| _||_||_ |_   ||_||_|", "|_|  ||_  _|  | _||_|  ||_| _|", "                              ";
+  constant %LOOKUP = ^10 RZ=> ( map *.join( "\n" ), zip $NUMBERS.lines.map( *.comb ).map: *.rotor: 3 );
+  join ',', gather for $art.lines.rotor: 4 {
+    take join '', map { .defined ?? $_ !! '?' }, %LOOKUP{ map *.join( "\n" ), zip .map( *.comb ).map: *.rotor: 3 }
+  }
+}
